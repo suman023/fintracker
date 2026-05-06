@@ -102,19 +102,31 @@ pipeline {
         // -------------------------------------------
         // STEP 6: Trivy - Security Check
         // -------------------------------------------
-        stage('Trivy Scan') {
+         stage('Install Trivy') {
             steps {
-                echo '>>> Step 6: Security scan ho raha hai...'
                 sh '''
-                    if ! command -v trivy &> /dev/null; then
-                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-                    fi
-                    trivy image --exit-code 0 --severity HIGH,CRITICAL ${DOCKER_IMAGE}:latest
+                    sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+
+                    wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+                        | gpg --dearmor \
+                        | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+
+                    echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" \
+                        | sudo tee /etc/apt/sources.list.d/trivy.list
+
+                    sudo apt-get update
+                    sudo apt-get install -y trivy
+                    trivy --version
                 '''
-                echo '>>> Security scan khatam!'
             }
         }
 
+        stage('Trivy Scan') {
+            steps {
+                sh " trivy image --exit-code 0 --severity HIGH,CRITICAL ${DOCKER_IMAGE}:latest"
+                archiveArtifacts artifacts: 'trivy-result.json', followSymlinks: false
+            }
+        }
         // -------------------------------------------
         // STEP 7: DockerHub Login + Push
         // -------------------------------------------
