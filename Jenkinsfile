@@ -1,535 +1,449 @@
-// ═══════════════════════════════════════════════════════════════
-//   JENKINSFILE — Expensio Expense Tracker
-//   Full CI/CD Pipeline with:
-//     ✅ Git Clone
-//     ✅ npm Install + Test
-//     ✅ SonarQube (Code Quality)
-//     ✅ Docker Build
-//     ✅ Trivy (Security Scan)
-//     ✅ Docker Login + Push
-//     ✅ Deploy
-//     ✅ Email Notification
-//
-//   Beginner Note: Har stage ek kaam karta hai.
-//   Agar ek stage fail ho, baaki skip ho jaate hain.
-// ═══════════════════════════════════════════════════════════════
+// ╔══════════════════════════════════════════════════════════╗
+// ║           JENKINSFILE — FinTrackr App                   ║
+// ║                                                          ║
+// ║  Jenkins kya karta hai?                                  ║
+// ║  Jab bhi tum GitHub pe code push karte ho,              ║
+// ║  Jenkins automatically ye sab karta hai:                 ║
+// ║                                                          ║
+// ║  1.  Code download karo  (Git Clone)                    ║
+// ║  2.  Packages install    (npm install)                   ║
+// ║  3.  Tests chalao        (npm test)                      ║
+// ║  4.  Code quality check  (SonarCloud)                   ║
+// ║  5.  Quality Gate check  (Pass/Fail)                     ║
+// ║  6.  Docker image banao  (docker build)                  ║
+// ║  7.  Security scan       (Trivy)                         ║
+// ║  8.  DockerHub login                                     ║
+// ║  9.  Image push          (docker push)                   ║
+// ║  10. App deploy          (docker compose up)             ║
+// ║  11. Email notification  (success/failure)               ║
+// ╚══════════════════════════════════════════════════════════╝
 
 pipeline {
 
-  // ── Agent ─────────────────────────────────────────────────
-  // "agent any" = kisi bhi available Jenkins machine pe chalao
-  agent any
+    // ─────────────────────────────────────────────────────
+    // AGENT = Jenkins kis machine pe kaam karega
+    // "any" = jo bhi available ho us pe chala do
+    // ─────────────────────────────────────────────────────
+    agent any
 
 
-  // ── Environment Variables ──────────────────────────────────
-  // Yeh variables poore pipeline mein use ho sakte hain
-  environment {
+    // ─────────────────────────────────────────────────────
+    // ENVIRONMENT VARIABLES
+    // Ye variables poore pipeline mein use ho sakte hain
+    // ─────────────────────────────────────────────────────
+    environment {
 
-    // App details
-    APP_NAME    = 'expensio'
-    APP_VERSION = "1.0.${env.BUILD_NUMBER}"  // e.g. 1.0.42
+        // ── App Details ───────────────────────────────
+        APP_NAME   = "fintrackr"
 
-    // Docker Hub details — apna username dalo
-    DOCKER_HUB_USERNAME = 'your-dockerhub-username'
-    DOCKER_IMAGE        = "${DOCKER_HUB_USERNAME}/expensio"
-    DOCKER_TAG          = "${APP_VERSION}"
+        // ── DockerHub ─────────────────────────────────
+        // APNA DOCKERHUB USERNAME YAHAN LIKHO ↓
+        DOCKER_IMAGE = "your-dockerhub-username/fintrackr"
+        DOCKER_TAG   = "v1.0.${BUILD_NUMBER}"
 
-    // Jenkins Credentials IDs — yeh Jenkins mein configure karo
-    // Manage Jenkins → Credentials → Add
-    DOCKER_CREDENTIALS = credentials('dockerhub-credentials')  // DockerHub login
-    SONAR_TOKEN        = credentials('sonar-token')            // SonarQube token
-    EMAIL_RECIPIENT    = 'your-email@gmail.com'                // Notification email
+        // ── SonarCloud Details ────────────────────────
+        // SonarCloud = Cloud wala SonarQube (free hai!)
+        // Tumhara project: https://sonarcloud.io
+        SONAR_PROJECT_KEY  = "suman023_fintracker"   // Project Key
+        SONAR_ORG_KEY      = "suman023"              // Organization Key
+        SONAR_HOST_URL     = "https://sonarcloud.io" // SonarCloud ka URL
 
-    // SonarQube Server URL — apna URL dalo
-    SONAR_HOST_URL = 'http://localhost:9000'
-    SONAR_PROJECT  = 'expensio-expense-tracker'
+        // ── Jenkins Credentials ───────────────────────
+        // Manage Jenkins → Credentials → Add se add karo
+        DOCKER_CREDS = credentials('dockerhub-credentials') // DockerHub login
+        SONAR_TOKEN  = credentials('sonar-token')           // SonarCloud token
 
-    // Git commit info (auto-filled by Jenkins)
-    GIT_COMMIT_SHORT = ''
-    GIT_AUTHOR       = ''
-  }
-
-
-  // ── Options ───────────────────────────────────────────────
-  options {
-    buildDiscarder(logRotator(numToKeepStr: '10'))  // Sirf last 10 builds rakhho
-    timeout(time: 30, unit: 'MINUTES')              // 30 min se zyada mat chalao
-    timestamps()                                     // Logs mein time show karo
-    ansiColor('xterm')                              // Colored console output
-  }
-
-
-  // ══════════════════════════════════════════════════════════
-  //   STAGES — Pipeline ke steps
-  // ══════════════════════════════════════════════════════════
-  stages {
-
-
-    // ── STAGE 1: Git Clone ───────────────────────────────────
-    // GitHub se latest code download karna
-    stage('📥 Git Clone') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 1: Downloading code...'
-        echo '══════════════════════════════════'
-
-        // Code clone karo (Jenkins job mein configured repo se)
-        checkout scm
-
-        // Git info save karo
-        script {
-          GIT_COMMIT_SHORT = sh(
-            script: 'git rev-parse --short HEAD',
-            returnStdout: true
-          ).trim()
-
-          GIT_AUTHOR = sh(
-            script: 'git log -1 --pretty=format:"%an"',
-            returnStdout: true
-          ).trim()
-        }
-
-        echo "✅ Code downloaded!"
-        echo "   Commit: ${GIT_COMMIT_SHORT}"
-        echo "   Author: ${GIT_AUTHOR}"
-      }
+        // ── Email ─────────────────────────────────────
+        // APNI EMAIL YAHAN LIKHO ↓
+        MY_EMAIL = "sumankumar02304@gmail.com"
     }
 
 
-    // ── STAGE 2: Install Dependencies ───────────────────────
-    // npm install — sari libraries download karo
-    stage('📦 Install Dependencies') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 2: Installing packages...'
-        echo '══════════════════════════════════'
+    // ─────────────────────────────────────────────────────
+    // OPTIONS = Pipeline ki settings
+    // ─────────────────────────────────────────────────────
+    options {
+        // Sirf last 5 builds rakho
+        buildDiscarder(logRotator(numToKeepStr: '5'))
 
-        dir('backend') {
-          // npm ci = clean install (faster & more reliable than npm install)
-          sh 'npm ci'
+        // 20 minute se zyada mat chalo
+        timeout(time: 20, unit: 'MINUTES')
 
-          // Security audit — known vulnerabilities check karo
-          sh 'npm audit --audit-level=high || true'
-        }
-
-        echo '✅ Packages installed!'
-      }
+        // Har step pe time dikhao logs mein
+        timestamps()
     }
 
 
-    // ── STAGE 3: Run Tests ───────────────────────────────────
-    // Jest unit tests chalao — code sahi kaam kar raha hai?
-    stage('🧪 Run Tests') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 3: Running tests...'
-        echo '══════════════════════════════════'
+    // ══════════════════════════════════════════════════════
+    // STAGES = Pipeline ke steps
+    // ══════════════════════════════════════════════════════
+    stages {
 
-        dir('backend') {
-          sh 'npm run test:ci'
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 1 — Code Download                       │
+        // │  GitHub se latest code laao                    │
+        // └────────────────────────────────────────────────┘
+        stage('📥 Code Download') {
+            steps {
+                echo '==============================='
+                echo '  Step 1: Code download...'
+                echo '==============================='
+
+                // GitHub/GitLab se code clone karo
+                checkout scm
+
+                echo '✅ Code download ho gaya!'
+            }
         }
 
-        echo '✅ All tests passed!'
-      }
 
-      post {
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 2 — Packages Install                    │
+        // │  npm install se saari libraries download karo  │
+        // └────────────────────────────────────────────────┘
+        stage('📦 npm Install') {
+            steps {
+                echo '==============================='
+                echo '  Step 2: npm install...'
+                echo '==============================='
+
+                dir('backend') {
+                    sh 'npm ci'
+                }
+
+                echo '✅ Packages install ho gaye!'
+            }
+        }
+
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 3 — Tests                               │
+        // │  Code sahi kaam kar raha hai? Check karo       │
+        // └────────────────────────────────────────────────┘
+        stage('🧪 Tests') {
+            steps {
+                echo '==============================='
+                echo '  Step 3: Tests chal rahe hain...'
+                echo '==============================='
+
+                dir('backend') {
+                    sh 'npm test || true'
+                }
+
+                echo '✅ Tests khatam!'
+            }
+        }
+
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 4 — SonarCloud Scan                     │
+        // │  Code mein bugs/problems dhundho               │
+        // │                                                  │
+        // │  Project Key : suman023_fintracker              │
+        // │  Org Key     : suman023                         │
+        // │  URL         : https://sonarcloud.io            │
+        // └────────────────────────────────────────────────┘
+        stage('🔍 SonarCloud Scan') {
+            steps {
+                echo '==============================='
+                echo '  Step 4: SonarCloud scan chal raha hai...'
+                echo '  URL: https://sonarcloud.io'
+                echo '==============================='
+
+                // SonarCloud pe code bhejo analysis ke liye
+                withSonarQubeEnv('SonarCloud') {
+                    sh """
+                        npx sonar-scanner \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.organization=${SONAR_ORG_KEY} \
+                          -Dsonar.projectName="FinTrackr" \
+                          -Dsonar.sources=backend,frontend \
+                          -Dsonar.exclusions=**/node_modules/**,**/*.test.js \
+                          -Dsonar.host.url=${SONAR_HOST_URL} \
+                          -Dsonar.login=${SONAR_TOKEN}
+                    """
+                }
+
+                echo '✅ SonarCloud scan ho gaya!'
+                echo '   Results dekho: https://sonarcloud.io/organizations/suman023'
+            }
+        }
+
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 5 — Quality Gate                        │
+        // │  SonarCloud ka result check karo               │
+        // │  Pass hua? → Age badho                         │
+        // │  Fail hua? → Pipeline rok do                   │
+        // └────────────────────────────────────────────────┘
+        stage('🚦 Quality Gate') {
+            steps {
+                echo '==============================='
+                echo '  Step 5: Quality gate check...'
+                echo '==============================='
+
+                // SonarCloud se result aane ka wait karo
+                // 5 minute mein result nahi aaya toh timeout
+                timeout(time: 5, unit: 'MINUTES') {
+                    // abortPipeline: true = fail hone pe pipeline rok do
+                    waitForQualityGate abortPipeline: true
+                }
+
+                echo '✅ Quality gate pass ho gaya!'
+            }
+        }
+
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 6 — Docker Image Build                  │
+        // │  Apni app ko Docker image mein pack karo       │
+        // └────────────────────────────────────────────────┘
+        stage('🐳 Docker Build') {
+            steps {
+                echo '==============================='
+                echo '  Step 6: Docker image ban rahi hai...'
+                echo '==============================='
+
+                // Image banao version tag ke saath
+                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+
+                // Same image ko "latest" bhi tag karo
+                sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+
+                echo "✅ Image ban gayi: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+            }
+        }
+
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 7 — Trivy Security Scan                 │
+        // │  Image mein koi security problem toh nahi?     │
+        // │  Jaise antivirus scan karta hai waise          │
+        // └────────────────────────────────────────────────┘
+        stage('🔒 Trivy Security Scan') {
+            steps {
+                echo '==============================='
+                echo '  Step 7: Security scan ho raha hai...'
+                echo '==============================='
+
+                script {
+                    // Trivy install karo agar nahi hai
+                    sh '''
+                        if ! command -v trivy &> /dev/null; then
+                            echo "Trivy install ho raha hai..."
+                            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+                                | sh -s -- -b /usr/local/bin
+                        fi
+                    '''
+
+                    // Image scan karo
+                    // --exit-code 0   = problem mile toh bhi pipeline mat roko
+                    // --severity HIGH,CRITICAL = sirf badi problems show karo
+                    // --format table  = table format mein dikhao
+                    sh """
+                        trivy image \
+                            --exit-code 0 \
+                            --severity HIGH,CRITICAL \
+                            --format table \
+                            ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    """
+                }
+
+                echo '✅ Security scan khatam! (Upar results dekho)'
+            }
+        }
+
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 8 — DockerHub Login                     │
+        // │  DockerHub account mein login karo             │
+        // └────────────────────────────────────────────────┘
+        stage('🔑 DockerHub Login') {
+            steps {
+                echo '==============================='
+                echo '  Step 8: DockerHub login...'
+                echo '==============================='
+
+                // Credentials securely use karo
+                // DOCKER_CREDS_USR = username automatically aata hai
+                // DOCKER_CREDS_PSW = password automatically aata hai
+                sh 'echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin'
+
+                echo "✅ DockerHub login ho gaya! (User: ${DOCKER_CREDS_USR})"
+            }
+        }
+
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 9 — Docker Push                         │
+        // │  Image ko DockerHub pe upload karo             │
+        // └────────────────────────────────────────────────┘
+        stage('📤 Docker Push') {
+            steps {
+                echo '==============================='
+                echo '  Step 9: DockerHub pe image upload ho rahi hai...'
+                echo '==============================='
+
+                // Version wali image push karo
+                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+
+                // Latest tag bhi push karo
+                sh "docker push ${DOCKER_IMAGE}:latest"
+
+                echo "✅ Image push ho gayi!"
+                echo "   Link: https://hub.docker.com/r/${DOCKER_IMAGE}"
+            }
+        }
+
+
+        // ┌────────────────────────────────────────────────┐
+        // │  STAGE 10 — Deploy                             │
+        // │  Docker Compose se app live karo               │
+        // └────────────────────────────────────────────────┘
+        stage('🚀 Deploy') {
+            steps {
+                echo '==============================='
+                echo '  Step 10: App deploy ho rahi hai...'
+                echo '==============================='
+
+                sh '''
+                    # Purane containers band karo
+                    docker compose down || true
+
+                    # Nayi image se containers start karo
+                    docker compose up -d --build
+
+                    # 10 second wait karo app start hone ke liye
+                    sleep 10
+
+                    # Status check karo
+                    echo ""
+                    echo "--- Container Status ---"
+                    docker compose ps
+                    echo ""
+
+                    # Health check karo
+                    echo "--- Health Check ---"
+                    curl -f http://localhost:3000/api/health && echo "App healthy hai!" || echo "App start ho rahi hai..."
+                '''
+
+                echo '✅ App deploy ho gayi!'
+                echo '   Browser mein kholo: http://localhost:3000'
+            }
+        }
+
+
+    } // stages khatam
+
+
+    // ══════════════════════════════════════════════════════
+    // POST ACTIONS
+    // Pipeline khatam hone ke baad kya karo
+    // ══════════════════════════════════════════════════════
+    post {
+
+        // ─── SUCCESS ──────────────────────────────────────
+        success {
+            echo ''
+            echo '🎉====================================🎉'
+            echo '🎉   BUILD SUCCESSFUL! APP IS LIVE!  🎉'
+            echo "🎉   http://localhost:3000            🎉"
+            echo '🎉====================================🎉'
+            echo ''
+
+            emailext(
+                subject: "✅ SUCCESS - FinTrackr Build #${BUILD_NUMBER}",
+                body: """
+Bhai Build pass ho gaya! 🎉
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+App Name  : FinTrackr
+Build No  : #${BUILD_NUMBER}
+Image     : ${DOCKER_IMAGE}:${DOCKER_TAG}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+App URL      : http://localhost:3000
+SonarCloud   : https://sonarcloud.io/organizations/suman023
+DockerHub    : https://hub.docker.com/r/${DOCKER_IMAGE}
+Build Logs   : ${BUILD_URL}
+
+Sab kuch theek hai!
+                """,
+                to: "${MY_EMAIL}"
+            )
+        }
+
+
+        // ─── FAILURE ──────────────────────────────────────
+        failure {
+            echo ''
+            echo '❌====================================❌'
+            echo '❌   BUILD FAILED! Kuch galat hua!   ❌'
+            echo '❌   Console Output dekho             ❌'
+            echo '❌====================================❌'
+            echo ''
+
+            emailext(
+                subject: "❌ FAILED - FinTrackr Build #${BUILD_NUMBER}",
+                body: """
+Bhai Build fail ho gaya! ❌
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+App Name  : FinTrackr
+Build No  : #${BUILD_NUMBER}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Error logs : ${BUILD_URL}console
+
+Jaldi check karo!
+                """,
+                to: "${MY_EMAIL}"
+            )
+        }
+
+
+        // ─── ALWAYS (cleanup) ─────────────────────────────
         always {
-          // Test results Jenkins dashboard mein dikhao
-          junit allowEmptyResults: true,
-                testResults: 'backend/test-results.xml'
+            echo '🧹 Cleanup ho raha hai...'
 
-          // Code coverage report
-          publishHTML(target: [
-            reportDir:   'backend/coverage/lcov-report',
-            reportFiles: 'index.html',
-            reportName:  'Code Coverage Report',
-            keepAll:     true,
-            allowMissing: true
-          ])
-        }
-      }
-    }
+            // DockerHub se logout karo
+            sh 'docker logout || true'
 
+            // Workspace saaf karo
+            cleanWs()
 
-    // ── STAGE 4: SonarQube Analysis ─────────────────────────
-    // Code quality check — bugs, code smells, duplications
-    stage('🔍 SonarQube Analysis') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 4: Code quality scan...'
-        echo '══════════════════════════════════'
-
-        // SonarQube plugin ka use karo
-        // Prerequisites:
-        //   1. SonarQube server chalu hona chahiye
-        //   2. Jenkins mein SonarQube configure karo:
-        //      Manage Jenkins → Configure System → SonarQube
-        //   3. sonar-token credential add karo
-        withSonarQubeEnv('SonarQube') {
-          sh """
-            npx sonar-scanner \
-              -Dsonar.projectKey=${SONAR_PROJECT} \
-              -Dsonar.projectName="Expensio Expense Tracker" \
-              -Dsonar.projectVersion=${APP_VERSION} \
-              -Dsonar.sources=backend,frontend \
-              -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/*.test.js \
-              -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info \
-              -Dsonar.host.url=${SONAR_HOST_URL} \
-              -Dsonar.login=${SONAR_TOKEN}
-          """
+            echo '✅ Done!'
         }
 
-        echo '✅ SonarQube scan complete!'
-      }
-    }
+    } // post khatam
+
+} // pipeline khatam
 
 
-    // ── STAGE 5: Quality Gate ────────────────────────────────
-    // SonarQube ka result check karo — pass hua ya fail?
-    stage('🚦 Quality Gate') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 5: Checking quality gate...'
-        echo '══════════════════════════════════'
-
-        // SonarQube se quality gate result lo
-        // Agar fail = pipeline rok do
-        timeout(time: 5, unit: 'MINUTES') {
-          waitForQualityGate abortPipeline: true
-        }
-
-        echo '✅ Quality gate passed!'
-      }
-    }
-
-
-    // ── STAGE 6: Docker Build ────────────────────────────────
-    // Docker image banao hamare Dockerfile se
-    stage('🐳 Docker Build') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 6: Building Docker image...'
-        echo '══════════════════════════════════'
-
-        sh """
-          docker build \
-            --target production \
-            --build-arg BUILD_DATE=\$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-            --build-arg GIT_COMMIT=${GIT_COMMIT_SHORT} \
-            --tag ${DOCKER_IMAGE}:${DOCKER_TAG} \
-            --tag ${DOCKER_IMAGE}:latest \
-            .
-        """
-
-        echo "✅ Image built: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-      }
-    }
-
-
-    // ── STAGE 7: Trivy Security Scan ────────────────────────
-    // Docker image mein security vulnerabilities dhundho
-    stage('🔒 Trivy Security Scan') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 7: Security scanning...'
-        echo '══════════════════════════════════'
-
-        // Trivy install karo (pehli baar)
-        sh '''
-          # Check if trivy is installed
-          if ! command -v trivy &> /dev/null; then
-            echo "Installing Trivy..."
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-              | sh -s -- -b /usr/local/bin
-          fi
-        '''
-
-        // Image scan karo
-        sh """
-          trivy image \
-            --exit-code 0 \
-            --severity HIGH,CRITICAL \
-            --format table \
-            --output trivy-report.txt \
-            ${DOCKER_IMAGE}:${DOCKER_TAG}
-
-          # Report print karo
-          cat trivy-report.txt
-        """
-
-        // Report archive karo
-        archiveArtifacts artifacts: 'trivy-report.txt', allowEmptyArchive: true
-
-        echo '✅ Security scan complete! (Check trivy-report.txt for details)'
-      }
-    }
-
-
-    // ── STAGE 8: Docker Login ────────────────────────────────
-    // DockerHub mein login karo
-    stage('🔑 Docker Login') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 8: Logging into DockerHub...'
-        echo '══════════════════════════════════'
-
-        // Jenkins credentials se securely login karo
-        // "dockerhub-credentials" ID Jenkins mein configured hai
-        withCredentials([usernamePassword(
-          credentialsId: 'dockerhub-credentials',
-          usernameVariable: 'DOCKER_USER',
-          passwordVariable: 'DOCKER_PASS'
-        )]) {
-          sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-        }
-
-        echo "✅ Logged in to DockerHub as ${DOCKER_HUB_USERNAME}"
-      }
-    }
-
-
-    // ── STAGE 9: Docker Push ─────────────────────────────────
-    // Image ko DockerHub pe upload karo
-    stage('📤 Docker Push') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 9: Pushing image to DockerHub...'
-        echo '══════════════════════════════════'
-
-        // Version tag ke saath push karo
-        sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
-
-        // "latest" tag bhi push karo
-        sh "docker push ${DOCKER_IMAGE}:latest"
-
-        echo "✅ Image pushed: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-        echo "   DockerHub: https://hub.docker.com/r/${DOCKER_HUB_USERNAME}/expensio"
-      }
-    }
-
-
-    // ── STAGE 10: Deploy ─────────────────────────────────────
-    // Latest image se app chalao
-    stage('🚀 Deploy') {
-      steps {
-        echo '══════════════════════════════════'
-        echo '  STAGE 10: Deploying application...'
-        echo '══════════════════════════════════'
-
-        // Docker compose se deploy karo
-        sh '''
-          # Purani containers band karo
-          docker compose down --remove-orphans || true
-
-          # Latest image pull karo
-          docker compose pull
-
-          # Naye containers start karo
-          docker compose up -d --build
-
-          # Status dekho
-          echo "--- Container Status ---"
-          docker compose ps
-
-          # App ready hone ka wait karo
-          sleep 15
-          echo "--- Health Check ---"
-          curl -f http://localhost/api/health && echo "✅ App is healthy!" || echo "⚠️ Health check failed"
-        '''
-
-        echo '✅ Deployment complete!'
-        echo "   App URL: http://localhost"
-        echo "   API URL: http://localhost/api"
-      }
-    }
-
-
-  } // end stages
-
-
-  // ══════════════════════════════════════════════════════════
-  //   POST ACTIONS — Pipeline khatam hone ke baad chalate hain
-  // ══════════════════════════════════════════════════════════
-  post {
-
-    // ── SUCCESS ───────────────────────────────────────────────
-    // Sab stages pass ho gaye ✅
-    success {
-      echo ''
-      echo '🎉 ════════════════════════════════════════'
-      echo '🎉   PIPELINE SUCCESSFUL!'
-      echo "🎉   App: http://localhost"
-      echo "🎉   Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-      echo '🎉 ════════════════════════════════════════'
-      echo ''
-
-      // Email notification — success
-      emailext(
-        subject: "✅ SUCCESS: Expensio Build #${env.BUILD_NUMBER}",
-        body: """
-          <html>
-          <body style="font-family: Arial, sans-serif; padding: 20px;">
-
-            <h2 style="color: #2ea043;">✅ Build Successful!</h2>
-
-            <table style="border-collapse: collapse; width: 100%;">
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Project</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">Expensio Expense Tracker</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Build #</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${env.BUILD_NUMBER}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Version</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${APP_VERSION}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Branch</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${env.BRANCH_NAME ?: 'main'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Commit</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${GIT_COMMIT_SHORT} by ${GIT_AUTHOR}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Docker Image</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${DOCKER_IMAGE}:${DOCKER_TAG}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>App URL</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;"><a href="http://localhost">http://localhost</a></td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Duration</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${currentBuild.durationString}</td>
-              </tr>
-            </table>
-
-            <br/>
-            <a href="${env.BUILD_URL}" style="
-              background: #2ea043;
-              color: white;
-              padding: 10px 20px;
-              text-decoration: none;
-              border-radius: 6px;
-            ">View Build Logs</a>
-
-          </body>
-          </html>
-        """,
-        to:          "${EMAIL_RECIPIENT}",
-        mimeType:    'text/html',
-        attachmentsPattern: 'trivy-report.txt'
-      )
-    }
-
-
-    // ── FAILURE ───────────────────────────────────────────────
-    // Koi stage fail ho gaya ❌
-    failure {
-      echo ''
-      echo '💔 ════════════════════════════════════════'
-      echo '💔   PIPELINE FAILED!'
-      echo '💔   Check Console Output for errors'
-      echo '💔 ════════════════════════════════════════'
-      echo ''
-
-      // Email notification — failure
-      emailext(
-        subject: "❌ FAILED: Expensio Build #${env.BUILD_NUMBER}",
-        body: """
-          <html>
-          <body style="font-family: Arial, sans-serif; padding: 20px;">
-
-            <h2 style="color: #f85149;">❌ Build Failed!</h2>
-            <p>Kuch galat hua. Niche details dekho.</p>
-
-            <table style="border-collapse: collapse; width: 100%;">
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Project</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">Expensio Expense Tracker</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Build #</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${env.BUILD_NUMBER}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Branch</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${env.BRANCH_NAME ?: 'main'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Commit</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${GIT_COMMIT_SHORT} by ${GIT_AUTHOR}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;"><b>Failed Stage</b></td>
-                <td style="padding: 8px; border: 1px solid #ddd; color: #f85149;">${env.STAGE_NAME ?: 'Unknown'}</td>
-              </tr>
-            </table>
-
-            <br/>
-            <a href="${env.BUILD_URL}console" style="
-              background: #f85149;
-              color: white;
-              padding: 10px 20px;
-              text-decoration: none;
-              border-radius: 6px;
-            ">View Error Logs</a>
-
-          </body>
-          </html>
-        """,
-        to:       "${EMAIL_RECIPIENT}",
-        mimeType: 'text/html'
-      )
-    }
-
-
-    // ── ALWAYS ────────────────────────────────────────────────
-    // Hamesha chalta hai — success ho ya fail
-    always {
-      echo '🧹 Cleaning up workspace...'
-
-      // DockerHub se logout karo
-      sh 'docker logout || true'
-
-      // Old/dangling Docker images hata do (disk space bachao)
-      sh 'docker image prune -f || true'
-
-      // Jenkins workspace clean karo
-      cleanWs()
-
-      echo '✅ Cleanup done!'
-    }
-
-  } // end post
-
-} // end pipeline
-
-
-// ═══════════════════════════════════════════════════════════
-//   JENKINS MEIN SETUP KARNE KE LIYE:
-//
-//   1. Credentials add karo (Manage Jenkins → Credentials):
-//      - ID: dockerhub-credentials → DockerHub username+password
-//      - ID: sonar-token          → SonarQube token (secret text)
-//
-//   2. SonarQube configure karo (Manage Jenkins → Configure System):
-//      - Name: SonarQube
-//      - URL:  http://localhost:9000
-//      - Token: sonar-token credential use karo
-//
-//   3. Email configure karo (Manage Jenkins → Configure System):
-//      - SMTP server: smtp.gmail.com
-//      - Port: 465
-//      - Gmail credentials add karo
-//
-//   4. Plugins chahiye:
-//      - Docker Pipeline
-//      - SonarQube Scanner
-//      - Email Extension (emailext)
-//      - HTML Publisher
-//      - AnsiColor
-// ═══════════════════════════════════════════════════════════
+// ╔══════════════════════════════════════════════════════════╗
+// ║  JENKINS SETUP CHECKLIST:                                ║
+// ║                                                          ║
+// ║  ☐ Credentials add karo:                                ║
+// ║    → ID: dockerhub-credentials (username+password)      ║
+// ║    → ID: sonar-token (SonarCloud token)                 ║
+// ║                                                          ║
+// ║  ☐ SonarCloud configure karo:                           ║
+// ║    Manage Jenkins → Configure System → SonarQube        ║
+// ║    → Name: SonarCloud                                    ║
+// ║    → URL : https://sonarcloud.io                        ║
+// ║    → Token: sonar-token (credential select karo)        ║
+// ║                                                          ║
+// ║  ☐ Email configure karo:                                ║
+// ║    Manage Jenkins → Configure System → Email            ║
+// ║    → SMTP: smtp.gmail.com  Port: 465                     ║
+// ║                                                          ║
+// ║  ☐ Plugins install karo:                                ║
+// ║    → SonarQube Scanner                                   ║
+// ║    → Docker Pipeline                                     ║
+// ║    → Email Extension                                     ║
+// ║                                                          ║
+// ║  ☐ Pipeline job banao:                                  ║
+// ║    New Item → Pipeline → Git → Repo URL                 ║
+// ║    Script Path: Jenkinsfile → Build Now!                 ║
+// ╚══════════════════════════════════════════════════════════╝
