@@ -11,17 +11,17 @@ pipeline {
     // =================================================
     environment {
 
-        APP_NAME      = "fintrackr"
+        APP_NAME = "fintrackr"
 
-        DOCKER_IMAGE = "suman2304/fintracker"
+        DOCKER_IMAGE = "suman2304/fintrackr"
 
-        DOCKER_TAG    = "v${BUILD_NUMBER}"
+        DOCKER_TAG = "v${BUILD_NUMBER}"
 
         SONAR_PROJECT = "suman023_fintracker"
 
-        SONAR_ORG     = "suman023"
+        SONAR_ORG = "suman023"
 
-        MY_EMAIL      = "sumankumar02304@gmail.com"
+        EMAIL_TO = "sumanshit023@gmail.com"
 
         PATH = "/usr/bin:/usr/local/bin:${env.PATH}"
     }
@@ -63,7 +63,7 @@ pipeline {
         }
 
         // =============================================
-        // STEP 2 - VERIFY NODE
+        // STEP 2 - VERIFY NODEJS
         // =============================================
         stage('Verify NodeJS') {
 
@@ -125,7 +125,7 @@ pipeline {
                     sh '''
                         chmod -R +x node_modules/.bin || true
 
-                        npx jest --coverage --forceExit
+                        NODE_ENV=test npx jest --coverage --forceExit
                     '''
                 }
 
@@ -148,14 +148,14 @@ pipeline {
 
                     sh """
                         npx sonar-scanner \
-                          -Dsonar.projectKey=${SONAR_PROJECT} \
-                          -Dsonar.organization=${SONAR_ORG} \
-                          -Dsonar.sources=backend \
-                          -Dsonar.tests=backend \
-                          -Dsonar.test.inclusions=**/*.test.js \
-                          -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/package-lock.json \
-                          -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info \
-                          -Dsonar.host.url=https://sonarcloud.io
+                        -Dsonar.projectKey=${SONAR_PROJECT} \
+                        -Dsonar.organization=${SONAR_ORG} \
+                        -Dsonar.sources=backend \
+                        -Dsonar.tests=backend \
+                        -Dsonar.test.inclusions=**/*.test.js \
+                        -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/package-lock.json \
+                        -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info \
+                        -Dsonar.host.url=https://sonarcloud.io
                     """
                 }
 
@@ -253,62 +253,63 @@ pipeline {
         // =============================================
         // STEP 9 - DOCKER LOGIN
         // =============================================
-stage('Docker Login') {
+        stage('Docker Login') {
 
-    steps {
+            steps {
 
-        echo '======================================='
-        echo 'STEP 9 - DockerHub Login'
-        echo '======================================='
+                echo '======================================='
+                echo 'STEP 9 - DockerHub Login'
+                echo '======================================='
 
-        withCredentials([
-            usernamePassword(
-                credentialsId: 'dockerhub-credentials',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS'
-            )
-        ]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
 
-            sh '''
-                echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-            '''
+                    sh '''
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    '''
+                }
+
+                echo 'DockerHub login successful!'
+            }
         }
 
-        echo 'DockerHub login successful!'
-    }
-}
-       // =============================================
-// STEP 10 - PUSH IMAGE TO DOCKERHUB
-// =============================================
-stage('Docker Push') {
+        // =============================================
+        // STEP 10 - PUSH IMAGE
+        // =============================================
+        stage('Docker Push') {
 
-    steps {
+            steps {
 
-        echo '======================================='
-        echo 'STEP 10 - Pushing Docker image'
-        echo '======================================='
+                echo '======================================='
+                echo 'STEP 10 - Pushing Docker image'
+                echo '======================================='
 
-        sh """
-            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-        """
+                sh """
+                    docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                """
 
-        sh """
-            docker push ${DOCKER_IMAGE}:latest
-        """
+                sh """
+                    docker push ${DOCKER_IMAGE}:latest
+                """
 
-        echo 'Docker image pushed successfully!'
-    }
-}
+                echo 'Docker image pushed successfully!'
+            }
+        }
 
         // =============================================
-        // STEP 10 - DEPLOY APPLICATION
+        // STEP 11 - DEPLOY APPLICATION
         // =============================================
         stage('Deploy Application') {
 
             steps {
 
                 echo '======================================='
-                echo 'STEP 10 - Deploying application'
+                echo 'STEP 11 - Deploying application'
                 echo '======================================='
 
                 sh '''
@@ -327,44 +328,44 @@ stage('Docker Push') {
         }
     }
 
-   // =================================================
-// POST ACTIONS
-// =================================================
-post {
+    // =================================================
+    // POST ACTIONS
+    // =================================================
+    post {
 
-    // =============================================
-    // ALWAYS
-    // =============================================
-    always {
+        // =============================================
+        // ALWAYS
+        // =============================================
+        always {
 
-        script {
+            script {
 
-            echo '======================================='
-            echo 'Cleaning workspace'
-            echo '======================================='
+                echo '======================================='
+                echo 'Cleaning workspace'
+                echo '======================================='
 
-            sh 'docker logout || true'
+                sh 'docker logout || true'
+            }
+
+            cleanWs()
         }
 
-        cleanWs()
-    }
+        // =============================================
+        // SUCCESS
+        // =============================================
+        success {
 
-    // =============================================
-    // SUCCESS
-    // =============================================
-    success {
+            echo '======================================='
+            echo 'BUILD SUCCESSFUL!'
+            echo '======================================='
 
-        echo '======================================='
-        echo 'BUILD SUCCESSFUL!'
-        echo '======================================='
+            mail(
 
-        mail(
+                to: "${EMAIL_TO}",
 
-            to: 'sumanshit023@gmail.com',
+                subject: "✅ Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
 
-            subject: "✅ Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-
-            body: """
+                body: """
 Build Successful!
 
 Project Name:
@@ -387,25 +388,25 @@ SUCCESS
 
 Application deployed successfully.
 """
-        )
-    }
+            )
+        }
 
-    // =============================================
-    // FAILURE
-    // =============================================
-    failure {
+        // =============================================
+        // FAILURE
+        // =============================================
+        failure {
 
-        echo '======================================='
-        echo 'BUILD FAILED!'
-        echo '======================================='
+            echo '======================================='
+            echo 'BUILD FAILED!'
+            echo '======================================='
 
-        mail(
+            mail(
 
-            to: 'sumanshit023@gmail.com',
+                to: "${EMAIL_TO}",
 
-            subject: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                subject: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
 
-            body: """
+                body: """
 Build Failed!
 
 Project Name:
@@ -419,7 +420,7 @@ ${env.BUILD_URL}console
 
 Please check failed pipeline stage.
 """
-        )
+            )
+        }
     }
-}
 }
