@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.example
+coverage
+*.test.js
+.git
+.gitignore
+Jenkinsfile
+README.md
+.DS_Store
+trivy-report.txt

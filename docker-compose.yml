@@ -1,0 +1,74 @@
+# ╔══════════════════════════════════════════════════════╗
+# ║        DOCKER COMPOSE — FinTrackr App               ║
+# ║                                                      ║
+# ║  2 services:                                         ║
+# ║    app   = FinTrackr Node.js app (port 3000)        ║
+# ║    redis = Database/Cache                            ║
+# ╚══════════════════════════════════════════════════════╝
+
+version: "3.8"
+
+services:
+
+  # ── SERVICE 1: FinTrackr App ───────────────────────
+  app:
+
+    # Dockerfile se image banao
+    build: .
+
+    # Container ka naam
+    container_name: fintrackr_app
+
+    # Port: tumhara PC:container
+    # Browser mein http://localhost:3000 kholo
+    ports:
+      - "3000:3000"
+
+    # Environment variables
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - FRONTEND_PATH=/app/frontend
+
+    # Crash hone par restart karo
+    restart: unless-stopped
+
+    # Redis pehle start ho
+    depends_on:
+      - redis
+
+
+  # ── SERVICE 2: Redis ───────────────────────────────
+  redis:
+
+    # Ready-made Redis image use karo
+    image: redis:7-alpine
+
+    # Container ka naam
+    container_name: fintrackr_redis
+
+    # Redis port
+    ports:
+      - "6379:6379"
+
+    # Data persist karo
+    volumes:
+      - redis_data:/data
+
+    restart: unless-stopped
+
+
+# Data store karne ki jagah
+volumes:
+  redis_data:
+
+
+# ╔══════════════════════════════════════════════════════╗
+# ║  COMMANDS:                                           ║
+# ║                                                      ║
+# ║  Start:   docker compose up -d                       ║
+# ║  Stop:    docker compose down                        ║
+# ║  Logs:    docker compose logs -f                     ║
+# ║  Status:  docker compose ps                          ║
+# ║  Rebuild: docker compose up -d --build               ║
+# ╚══════════════════════════════════════════════════════╝

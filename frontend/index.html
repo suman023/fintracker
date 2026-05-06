@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FinTrackr — Smart Expense Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── THEMES ── */
+    [data-theme="dark"] {
+      --bg: #080b12; --bg2: #0e1320;
+      --surface: rgba(255,255,255,0.04); --surface2: rgba(255,255,255,0.08);
+      --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.16);
+      --text: #f0f2f8; --text2: #8892a4; --text3: #4d5668;
+      --accent: #6c63ff; --accent2: #8b84ff; --accent-bg: rgba(108,99,255,0.12);
+      --green: #00e5a0; --green-bg: rgba(0,229,160,0.1);
+      --red: #ff5c7a;   --red-bg: rgba(255,92,122,0.1);
+      --yellow: #ffc542;
+      --shadow: 0 20px 60px rgba(0,0,0,0.6);
+      --shadow-sm: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    [data-theme="light"] {
+      --bg: #f0f2fa; --bg2: #e8eaf4;
+      --surface: rgba(255,255,255,0.7); --surface2: rgba(255,255,255,0.95);
+      --border: rgba(0,0,0,0.07); --border2: rgba(0,0,0,0.14);
+      --text: #1a1d2e; --text2: #6b7280; --text3: #9ca3af;
+      --accent: #5b52ef; --accent2: #7c75f5; --accent-bg: rgba(91,82,239,0.08);
+      --green: #00b87a; --green-bg: rgba(0,184,122,0.08);
+      --red: #ef4060;   --red-bg: rgba(239,64,96,0.08);
+      --yellow: #d97706;
+      --shadow: 0 20px 60px rgba(0,0,0,0.1);
+      --shadow-sm: 0 4px 20px rgba(0,0,0,0.07);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* dot grid bg */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: radial-gradient(circle, var(--border2) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none; z-index: 0; opacity: 0.6;
+    }
+
+    /* ambient glow */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 15% 15%, rgba(108,99,255,0.08) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 40% at 85% 85%, rgba(0,229,160,0.05) 0%, transparent 65%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      height: 62px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+      transition: background 0.3s;
+    }
+
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+
+    .nav-logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 16px rgba(108,99,255,0.3);
+    }
+
+    .nav-logo svg {
+      width: 18px; height: 18px;
+      fill: none; stroke: #fff;
+      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .nav-name {
+      font-size: 1.2rem; font-weight: 800;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, var(--text) 20%, var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Theme toggle */
+    .theme-btn {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 100px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--text2);
+      font-family: 'Syne', sans-serif;
+      transition: all 0.3s;
+      user-select: none;
+    }
+
+    .theme-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+    /* ── MAIN ── */
+    .main {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 30px 24px 60px;
+      position: relative; z-index: 1;
+    }
+
+    /* Welcome */
+    .welcome {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 26px;
+    }
+
+    .welcome h1 {
+      font-size: 1.65rem; font-weight: 800;
+      letter-spacing: -0.04em; margin-bottom: 4px;
+    }
+
+    .welcome h1 span { color: var(--accent2); }
+
+    .welcome p {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem; color: var(--text2);
+    }
+
+    .date-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.74rem; color: var(--text2);
+      padding: 8px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 100px;
+    }
+
+    /* ── STATS ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px; margin-bottom: 24px;
+    }
+
+    .stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px; padding: 22px;
+      position: relative; overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .stat:hover { transform: translateY(-3px); box-shadow: var(--shadow-sm); border-color: var(--border2); }
+
+    .stat::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; border-radius: 20px 20px 0 0;
+    }
+
+    .stat.s-inc::after { background: linear-gradient(90deg, var(--green), transparent); }
+    .stat.s-exp::after { background: linear-gradient(90deg, var(--red), transparent); }
+    .stat.s-bal::after { background: linear-gradient(90deg, var(--accent), transparent); }
+
+    .stat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+
+    .stat-lbl {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text2);
+    }
+
+    .stat-ico {
+      width: 34px; height: 34px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem;
+    }
+
+    .s-inc .stat-ico { background: var(--green-bg); }
+    .s-exp .stat-ico { background: var(--red-bg); }
+    .s-bal .stat-ico { background: var(--accent-bg); }
+
+    .stat-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.8rem; font-weight: 500; letter-spacing: -0.04em;
+    }
+
+    .s-inc .stat-val { color: var(--green); }
+    .s-exp .stat-val { color: var(--red); }
+    .s-bal .stat-val { color: var(--accent2); }
+
+    .stat-note {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem; color: var(--text3); margin-top: 5px;
+    }
+
+    /* ── GRID ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 355px;
+      gap: 18px; align-items: start;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px; padding: 22px;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .card-hd {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .card-ttl {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 7px var(--accent);
+    }
+
+    .badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem; padding: 3px 10px;
+      border-radius: 100px;
+      background: var(--surface); border: 1px solid var(--border2);
+      color: var(--text3);
+    }
+
+    /* ── TYPE TOGGLE ── */
+    .type-toggle {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 12px; padding: 4px; margin-bottom: 14px;
+    }
+
+    .t-btn {
+      padding: 10px; border: 1px solid transparent;
+      border-radius: 9px; cursor: pointer;
+      font-family: 'Syne', sans-serif; font-size: 0.84rem; font-weight: 600;
+      background: transparent; color: var(--text2); transition: all 0.3s;
+    }
+
+    .t-btn.on-i { background: var(--green-bg); color: var(--green); border-color: rgba(0,229,160,0.28); }
+    .t-btn.on-e { background: var(--red-bg); color: var(--red); border-color: rgba(255,92,122,0.28); }
+
+    /* ── FORM ── */
+    .fg { margin-bottom: 13px; }
+
+    .fg label {
+      display: block;
+      font-family: 'DM Mono', monospace; font-size: 0.68rem;
+      color: var(--text2); text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 7px;
+    }
+
+    .fg input, .fg select {
+      width: 100%; padding: 11px 13px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 11px; color: var(--text);
+      font-family: 'Syne', sans-serif; font-size: 0.88rem;
+      outline: none; transition: all 0.3s;
+    }
+
+    .fg input:focus, .fg select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+
+    .fg input::placeholder { color: var(--text3); }
+    .fg select option { background: var(--bg2); }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+
+    .btn-add {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      color: #fff; border: none; border-radius: 11px;
+      font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; transition: all 0.3s;
+      box-shadow: 0 5px 20px rgba(108,99,255,0.35); margin-top: 5px;
+    }
+
+    .btn-add:hover  { opacity: 0.88; transform: translateY(-1px); }
+    .btn-add:active { transform: scale(0.97); }
+
+    /* ── CHART ── */
+    .bar-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+
+    .b-label {
+      font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--text2);
+      width: 84px; flex-shrink: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .b-track {
+      flex: 1; height: 21px;
+      background: var(--surface); border-radius: 6px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .b-fill {
+      height: 100%; border-radius: 6px;
+      display: flex; align-items: center; padding-left: 9px;
+      transition: width 0.9s cubic-bezier(0.34,1.56,0.64,1); min-width: 28px;
+    }
+
+    .b-pct { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.72); }
+
+    .b-amt {
+      font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--text2);
+      width: 62px; text-align: right; flex-shrink: 0;
+    }
+
+    /* ── FILTER CHIPS ── */
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 13px; }
+
+    .chip {
+      padding: 5px 12px; border-radius: 100px;
+      border: 1px solid var(--border2); background: var(--surface);
+      color: var(--text2); font-family: 'DM Mono', monospace;
+      font-size: 0.72rem; cursor: pointer; transition: all 0.3s;
+    }
+
+    .chip.on { background: var(--accent-bg); border-color: var(--accent); color: var(--accent2); }
+
+    /* ── TRANSACTIONS ── */
+    .txn-list {
+      display: flex; flex-direction: column; gap: 7px;
+      max-height: 430px; overflow-y: auto; padding-right: 4px;
+    }
+
+    .txn-list::-webkit-scrollbar { width: 4px; }
+    .txn-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+    .txn {
+      display: flex; align-items: center; gap: 11px;
+      padding: 12px 13px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 13px; transition: all 0.2s;
+      animation: txnIn 0.25s ease;
+    }
+
+    @keyframes txnIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .txn:hover { border-color: var(--border2); transform: translateX(3px); }
+
+    .txn-ico {
+      width: 36px; height: 36px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem; flex-shrink: 0;
+    }
+
+    .txn-info { flex: 1; min-width: 0; }
+
+    .txn-nm {
+      font-size: 0.86rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .txn-meta {
+      font-family: 'DM Mono', monospace; font-size: 0.65rem;
+      color: var(--text3); margin-top: 2px;
+    }
+
+    .txn-r { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+
+    .txn-amt { font-family: 'DM Mono', monospace; font-size: 0.86rem; font-weight: 500; }
+    .ti { color: var(--green); }
+    .te { color: var(--red); }
+
+    .txn-del {
+      background: none; border: none; color: var(--text3);
+      cursor: pointer; padding: 4px 6px; border-radius: 6px;
+      font-size: 0.78rem; transition: all 0.2s;
+    }
+
+    .txn-del:hover { color: var(--red); background: var(--red-bg); }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center; padding: 40px 0; color: var(--text3);
+    }
+
+    .empty .ei { font-size: 2rem; margin-bottom: 10px; opacity: 0.4; }
+    .empty .et { font-family: 'DM Mono', monospace; font-size: 0.78rem; }
+
+    /* ── SUMMARY ── */
+    .sum-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+    }
+
+    .sum-row:last-child { border-bottom: none; }
+    .sum-k { font-size: 0.8rem; color: var(--text2); }
+    .sum-v { font-family: 'DM Mono', monospace; font-size: 0.8rem; font-weight: 500; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .grid  { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+      .navbar { padding: 0 16px; }
+      .main  { padding: 20px 16px 48px; }
+    }
+
+    @media (max-width: 480px) {
+      .date-badge { display: none; }
+      .row2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">
+      <svg viewBox="0 0 24 24">
+        <path d="M6 3h12"/><path d="M6 8h12"/>
+        <path d="M10 3c0 5.5-2 8.5-4 13"/>
+        <path d="M14 3c0 5.5 2 8.5 4 13"/>
+        <path d="M10 13.5l4 7.5"/>
+      </svg>
+    </div>
+    <span class="nav-name">FinTrackr</span>
+  </div>
+
+  <!-- Light / Dark toggle -->
+  <div class="theme-btn" onclick="toggleTheme()">
+    <span id="theme-icon">🌙</span>
+    <span id="theme-label">Dark Mode</span>
+  </div>
+</nav>
+
+<!-- ── MAIN APP ── -->
+<div class="main">
+
+  <!-- Welcome -->
+  <div class="welcome">
+    <div>
+      <h1>Hey, <span>Suman</span> 👋</h1>
+      <p id="w-sub">Loading...</p>
+    </div>
+    <div class="date-badge" id="w-date">—</div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat s-inc">
+      <div class="stat-top">
+        <div class="stat-lbl">Total Income</div>
+        <div class="stat-ico">💚</div>
+      </div>
+      <div class="stat-val" id="sv-inc">₹0.00</div>
+      <div class="stat-note" id="sv-inc-n">0 transactions</div>
+    </div>
+    <div class="stat s-exp">
+      <div class="stat-top">
+        <div class="stat-lbl">Total Expenses</div>
+        <div class="stat-ico">🔴</div>
+      </div>
+      <div class="stat-val" id="sv-exp">₹0.00</div>
+      <div class="stat-note" id="sv-exp-n">0 transactions</div>
+    </div>
+    <div class="stat s-bal">
+      <div class="stat-top">
+        <div class="stat-lbl">Net Balance</div>
+        <div class="stat-ico">💜</div>
+      </div>
+      <div class="stat-val" id="sv-bal">₹0.00</div>
+      <div class="stat-note" id="sv-rate">Savings: 0%</div>
+    </div>
+  </div>
+
+  <!-- CONTENT GRID -->
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div>
+
+      <!-- Category Chart -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd">
+          <div class="card-ttl"><div class="dot"></div>Spending by Category</div>
+          <span class="badge" id="chart-lbl">This month</span>
+        </div>
+        <div id="chart-area">
+          <div class="empty"><div class="ei">📊</div><div class="et">No expense data yet</div></div>
+        </div>
+      </div>
+
+      <!-- Transactions -->
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-ttl">
+            <div class="dot" style="background:var(--green);box-shadow:0 0 7px var(--green)"></div>
+            Transactions
+          </div>
+          <span class="badge" id="txn-badge">0 total</span>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="chips" id="filter-chips">
+          <div class="chip on" data-f="all">All</div>
+          <div class="chip" data-f="income">↑ Income</div>
+          <div class="chip" data-f="expense">↓ Expense</div>
+        </div>
+
+        <div class="txn-list" id="txn-list">
+          <div class="empty">
+            <div class="ei">📭</div>
+            <div class="et">No transactions yet. Add one!</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- RIGHT: Add Form -->
+    <div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-ttl">
+            <div class="dot" style="background:var(--red);box-shadow:0 0 7px var(--red)"></div>
+            Add Transaction
+          </div>
+        </div>
+
+        <!-- Type Toggle -->
+        <div class="type-toggle">
+          <button class="t-btn on-i" id="b-inc" onclick="setType('income')">↑ Income</button>
+          <button class="t-btn" id="b-exp" onclick="setType('expense')">↓ Expense</button>
+        </div>
+
+        <div class="fg">
+          <label>Description</label>
+          <input type="text" id="f-desc" placeholder="e.g. Salary, Coffee, Rent..."/>
+        </div>
+
+        <div class="row2">
+          <div class="fg">
+            <label>Amount (₹)</label>
+            <input type="number" id="f-amt" placeholder="0.00" min="0" step="0.01"/>
+          </div>
+          <div class="fg">
+            <label>Date</label>
+            <input type="date" id="f-date"/>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label>Category</label>
+          <select id="f-cat">
+            <option value="🍔 Food">🍔 Food</option>
+            <option value="🚗 Transport">🚗 Transport</option>
+            <option value="🏠 Housing">🏠 Housing</option>
+            <option value="🛍️ Shopping">🛍️ Shopping</option>
+            <option value="💊 Health">💊 Health</option>
+            <option value="📚 Education">📚 Education</option>
+            <option value="🎮 Entertainment">🎮 Entertainment</option>
+            <option value="💡 Utilities">💡 Utilities</option>
+            <option value="💼 Salary">💼 Salary</option>
+            <option value="💰 Freelance">💰 Freelance</option>
+            <option value="📈 Investment">📈 Investment</option>
+            <option value="✈️ Travel">✈️ Travel</option>
+            <option value="🏦 Other">🏦 Other</option>
+          </select>
+        </div>
+
+        <button class="btn-add" onclick="addTxn()">+ Add Transaction</button>
+
+        <!-- Quick Summary -->
+        <div style="margin-top:22px">
+          <div class="card-ttl" style="margin-bottom:12px">
+            <div class="dot" style="background:var(--yellow);box-shadow:0 0 7px var(--yellow)"></div>
+            Quick Summary
+          </div>
+          <div class="sum-row">
+            <span class="sum-k">Highest expense</span>
+            <span class="sum-v" id="sm-max">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-k">Average expense</span>
+            <span class="sum-v" id="sm-avg">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-k">Total entries</span>
+            <span class="sum-v" id="sm-tot">0</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-k">This month spend</span>
+            <span class="sum-v" id="sm-month">₹0.00</span>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /right -->
+
+  </div><!-- /grid -->
+</div><!-- /main -->
+
+<script>
+  // ── Category Colors ──────────────────────────
+  const CLRS = {
+    '🍔 Food':         '#ff6b6b',
+    '🚗 Transport':    '#4ecdc4',
+    '🏠 Housing':      '#ffd166',
+    '🛍️ Shopping':     '#f97316',
+    '💊 Health':       '#06d6a0',
+    '📚 Education':    '#60a5fa',
+    '🎮 Entertainment':'#a78bfa',
+    '💡 Utilities':    '#fb923c',
+    '💼 Salary':       '#00e5a0',
+    '💰 Freelance':    '#34d399',
+    '📈 Investment':   '#58a6ff',
+    '✈️ Travel':       '#f472b6',
+    '🏦 Other':        '#8b949e',
+  };
+
+  // ── State ────────────────────────────────────
+  let txns    = JSON.parse(localStorage.getItem('ft_txns') || '[]');
+  let curType = 'income';
+  let curFilt = 'all';
+
+  // ── Helpers ──────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const fmt = n => '₹' + Math.abs(n).toLocaleString('en-IN', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+  const save = () => localStorage.setItem('ft_txns', JSON.stringify(txns));
+
+  // ── Theme ────────────────────────────────────
+  let theme = localStorage.getItem('ft_theme') || 'dark';
+
+  function applyTheme(t) {
+    theme = t;
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('ft_theme', t);
+    $('theme-icon').textContent  = t === 'dark' ? '🌙' : '☀️';
+    $('theme-label').textContent = t === 'dark' ? 'Dark Mode' : 'Light Mode';
+  }
+
+  function toggleTheme() {
+    applyTheme(theme === 'dark' ? 'light' : 'dark');
+  }
+
+  applyTheme(theme);
+
+  // ── Type Toggle ──────────────────────────────
+  function setType(t) {
+    curType = t;
+    $('b-inc').className = 't-btn' + (t === 'income'  ? ' on-i' : '');
+    $('b-exp').className = 't-btn' + (t === 'expense' ? ' on-e' : '');
+  }
+
+  // ── Filter Chips ─────────────────────────────
+  $('filter-chips').addEventListener('click', function(e) {
+    if (!e.target.dataset.f) return;
+    curFilt = e.target.dataset.f;
+    document.querySelectorAll('.chip').forEach(function(c) {
+      c.classList.toggle('on', c.dataset.f === curFilt);
+    });
+    renderTxns();
+  });
+
+  // ── Add Transaction ──────────────────────────
+  function addTxn() {
+    var desc = $('f-desc').value.trim();
+    var amt  = parseFloat($('f-amt').value);
+    var date = $('f-date').value;
+    var cat  = $('f-cat').value;
+
+    if (!desc)              return flash('f-desc');
+    if (!amt  || amt <= 0)  return flash('f-amt');
+    if (!date)              return flash('f-date');
+
+    txns.push({
+      id:       Date.now() + '',
+      desc:     desc,
+      amount:   amt,
+      type:     curType,
+      category: cat,
+      date:     date
+    });
+
+    save();
+    $('f-desc').value = '';
+    $('f-amt').value  = '';
+    render();
+  }
+
+  function flash(id) {
+    var el = $(id);
+    el.style.borderColor = 'var(--red)';
+    el.style.boxShadow   = '0 0 0 3px var(--red-bg)';
+    el.focus();
+    setTimeout(function() {
+      el.style.borderColor = '';
+      el.style.boxShadow   = '';
+    }, 1500);
+  }
+
+  // ── Delete ───────────────────────────────────
+  function delTxn(id) {
+    txns = txns.filter(function(t) { return t.id !== id; });
+    save();
+    render();
+  }
+
+  // ── Render Stats ─────────────────────────────
+  function renderStats() {
+    var inc = txns.filter(function(t) { return t.type === 'income'; })
+                  .reduce(function(a, t) { return a + t.amount; }, 0);
+    var exp = txns.filter(function(t) { return t.type === 'expense'; })
+                  .reduce(function(a, t) { return a + t.amount; }, 0);
+    var bal  = inc - exp;
+    var rate = inc > 0 ? Math.round((bal / inc) * 100) : 0;
+
+    $('sv-inc').textContent   = fmt(inc);
+    $('sv-exp').textContent   = fmt(exp);
+    $('sv-bal').textContent   = fmt(bal);
+    $('sv-bal').style.color   = bal >= 0 ? 'var(--accent2)' : 'var(--red)';
+    $('sv-inc-n').textContent = txns.filter(function(t) { return t.type === 'income'; }).length + ' transactions';
+    $('sv-exp-n').textContent = txns.filter(function(t) { return t.type === 'expense'; }).length + ' transactions';
+    $('sv-rate').textContent  = 'Savings rate: ' + rate + '%';
+
+    var ea = txns.filter(function(t) { return t.type === 'expense'; }).map(function(t) { return t.amount; });
+    $('sm-max').textContent = ea.length ? fmt(Math.max.apply(null, ea)) : '—';
+    $('sm-avg').textContent = ea.length ? fmt(ea.reduce(function(a,b){return a+b;},0) / ea.length) : '—';
+    $('sm-tot').textContent = txns.length;
+
+    var now = new Date();
+    var ms  = txns.filter(function(t) {
+      var d = new Date(t.date);
+      return t.type === 'expense' &&
+             d.getMonth()    === now.getMonth() &&
+             d.getFullYear() === now.getFullYear();
+    }).reduce(function(a, t) { return a + t.amount; }, 0);
+    $('sm-month').textContent = fmt(ms);
+  }
+
+  // ── Render Chart ─────────────────────────────
+  function renderChart() {
+    var cats = {};
+    txns.filter(function(t) { return t.type === 'expense'; }).forEach(function(t) {
+      cats[t.category] = (cats[t.category] || 0) + t.amount;
+    });
+
+    var sorted = Object.entries(cats).sort(function(a,b){ return b[1]-a[1]; }).slice(0,7);
+    var max    = sorted.length ? sorted[0][1] : 1;
+    var el     = $('chart-area');
+
+    if (!sorted.length) {
+      el.innerHTML = '<div class="empty"><div class="ei">📊</div><div class="et">No expenses yet</div></div>';
+      return;
+    }
+
+    el.innerHTML = sorted.map(function(item) {
+      var cat   = item[0];
+      var val   = item[1];
+      var pct   = Math.max(Math.round((val / max) * 100), 5);
+      var color = CLRS[cat] || '#8b949e';
+      var emoji = cat.split(' ')[0];
+      var name  = cat.split(' ').slice(1).join(' ');
+      return '<div class="bar-row">' +
+        '<div class="b-label">' + emoji + ' ' + name + '</div>' +
+        '<div class="b-track">' +
+          '<div class="b-fill" style="width:' + pct + '%;background:' + color + '28;border:1px solid ' + color + '50">' +
+            '<span class="b-pct">' + pct + '%</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="b-amt">' + fmt(val) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Render Transactions ───────────────────────
+  function renderTxns() {
+    var list = txns.slice();
+    if (curFilt !== 'all') {
+      list = list.filter(function(t) { return t.type === curFilt; });
+    }
+    list = list.reverse();
+
+    $('txn-badge').textContent = list.length + ' total';
+    var el = $('txn-list');
+
+    if (!list.length) {
+      el.innerHTML = '<div class="empty"><div class="ei">📭</div><div class="et">No transactions found</div></div>';
+      return;
+    }
+
+    el.innerHTML = list.map(function(t) {
+      var color = CLRS[t.category] || '#8b949e';
+      var emoji = t.category.split(' ')[0];
+      var sign  = t.type === 'income' ? '+' : '-';
+      var cls   = t.type === 'income' ? 'ti' : 'te';
+      return '<div class="txn">' +
+        '<div class="txn-ico" style="background:' + color + '18;border:1px solid ' + color + '30">' + emoji + '</div>' +
+        '<div class="txn-info">' +
+          '<div class="txn-nm">' + t.desc + '</div>' +
+          '<div class="txn-meta">' + t.category + ' · ' + t.date + '</div>' +
+        '</div>' +
+        '<div class="txn-r">' +
+          '<div class="txn-amt ' + cls + '">' + sign + fmt(t.amount) + '</div>' +
+          '<button class="txn-del" onclick="delTxn(\'' + t.id + '\')">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Master Render ────────────────────────────
+  function render() {
+    renderStats();
+    renderChart();
+    renderTxns();
+  }
+
+  // ── Init ─────────────────────────────────────
+  var now = new Date();
+  $('w-sub').textContent    = 'Your financial overview for ' + now.toLocaleString('default', {month:'long', year:'numeric'});
+  $('w-date').textContent   = now.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+  $('chart-lbl').textContent = now.toLocaleString('default', {month:'long', year:'numeric'});
+  $('f-date').value          = now.toISOString().split('T')[0];
+
+  render();
+</script>
+</body>
+</html>
