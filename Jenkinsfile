@@ -327,70 +327,99 @@ stage('Docker Push') {
         }
     }
 
-    // =================================================
-    // POST ACTIONS
-    // =================================================
-    post {
+   // =================================================
+// POST ACTIONS
+// =================================================
+post {
 
-        success {
+    // =============================================
+    // ALWAYS
+    // =============================================
+    always {
+
+        script {
 
             echo '======================================='
-            echo 'BUILD SUCCESSFUL!'
+            echo 'Cleaning workspace'
             echo '======================================='
 
-            emailext(
-                subject: "SUCCESS - FinTrackr Build #${BUILD_NUMBER}",
-                body: """
-                    Build Successful!
-
-                    Project: ${APP_NAME}
-
-                    Build Number: ${BUILD_NUMBER}
-
-                    Build URL:
-                    ${BUILD_URL}
-
-                    Docker Image:
-                    ${DOCKER_IMAGE}:${DOCKER_TAG}
-                """,
-                to: "${MY_EMAIL}"
-            )
+            sh 'docker logout || true'
         }
 
-        failure {
-
-            echo '======================================='
-            echo 'BUILD FAILED!'
-            echo '======================================='
-
-            emailext(
-                subject: "FAILED - FinTrackr Build #${BUILD_NUMBER}",
-                body: """
-                    Build Failed!
-
-                    Project: ${APP_NAME}
-
-                    Build Number: ${BUILD_NUMBER}
-
-                    Check console logs:
-                    ${BUILD_URL}console
-                """,
-                to: "${MY_EMAIL}"
-            )
-        }
-
-        always {
-
-            script {
-
-                echo '======================================='
-                echo 'Cleaning workspace'
-                echo '======================================='
-
-                sh 'docker logout || true'
-            }
-
-            cleanWs()
-        }
+        cleanWs()
     }
+
+    // =============================================
+    // SUCCESS
+    // =============================================
+    success {
+
+        echo '======================================='
+        echo 'BUILD SUCCESSFUL!'
+        echo '======================================='
+
+        mail(
+
+            to: 'sumanshit023@gmail.com',
+
+            subject: "✅ Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+
+            body: """
+Build Successful!
+
+Project Name:
+${env.JOB_NAME}
+
+Build Number:
+${env.BUILD_NUMBER}
+
+Build URL:
+${env.BUILD_URL}
+
+Docker Image:
+${DOCKER_IMAGE}:${DOCKER_TAG}
+
+SonarCloud Scan:
+SUCCESS
+
+Trivy Scan:
+SUCCESS
+
+Application deployed successfully.
+"""
+        )
+    }
+
+    // =============================================
+    // FAILURE
+    // =============================================
+    failure {
+
+        echo '======================================='
+        echo 'BUILD FAILED!'
+        echo '======================================='
+
+        mail(
+
+            to: 'sumanshit023@gmail.com',
+
+            subject: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+
+            body: """
+Build Failed!
+
+Project Name:
+${env.JOB_NAME}
+
+Build Number:
+${env.BUILD_NUMBER}
+
+Check Console Logs:
+${env.BUILD_URL}console
+
+Please check failed pipeline stage.
+"""
+        )
+    }
+}
 }
