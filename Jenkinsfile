@@ -66,20 +66,26 @@ pipeline {
         // STEP 4: SonarCloud - Code Quality Check
         // -------------------------------------------
         stage('SonarCloud Scan') {
-            steps {
-                echo '>>> Step 4: SonarCloud scan chal raha hai...'
-                withSonarQubeEnv('SonarCloud') {
-                    sh """
-                        npx sonar-scanner \
-                          -Dsonar.projectKey=suman023_fintracker \
-                          -Dsonar.organization=suman023 \
-                          -Dsonar.sources=. \
-                          -Dsonar.host.url=https://sonarcloud.io
-                    """
-                }
-                echo '>>> SonarCloud scan ho gaya!'
-            }
+    steps {
+        echo '>>> Step 4: SonarCloud scan chal raha hai...'
+
+        withSonarQubeEnv('SonarCloud') {
+
+            sh """
+                npx sonar-scanner \
+                  -Dsonar.projectKey=suman023_fintracker \
+                  -Dsonar.organization=suman023 \
+                  -Dsonar.sources=backend \
+                  -Dsonar.tests=backend \
+                  -Dsonar.test.inclusions=**/*.test.js \
+                  -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/package-lock.json \
+                  -Dsonar.host.url=https://sonarcloud.io
+            """
         }
+
+        echo '>>> SonarCloud scan ho gaya!'
+    }
+}
 
         // -------------------------------------------
         // STEP 5: Docker Image Banao
