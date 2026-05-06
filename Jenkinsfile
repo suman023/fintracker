@@ -251,40 +251,54 @@ pipeline {
         }
 
         // =============================================
-        // STEP 9 - PUSH IMAGE TO DOCKERHUB
+        // STEP 9 - DOCKER LOGIN
         // =============================================
-        stage('Docker Push') {
+stage('Docker Login') {
 
-            steps {
+    steps {
 
-                echo '======================================='
-                echo 'STEP 9 - Pushing Docker image'
-                echo '======================================='
+        echo '======================================='
+        echo 'STEP 9 - DockerHub Login'
+        echo '======================================='
 
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-credentials',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'dockerhub-credentials',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )
+        ]) {
 
-                    sh '''
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    '''
-
-                    sh """
-                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    """
-
-                    sh """
-                        docker push ${DOCKER_IMAGE}:latest
-                    """
-                }
-
-                echo 'Docker image pushed!'
-            }
+            sh '''
+                echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+            '''
         }
+
+        echo 'DockerHub login successful!'
+    }
+}
+       // =============================================
+// STEP 10 - PUSH IMAGE TO DOCKERHUB
+// =============================================
+stage('Docker Push') {
+
+    steps {
+
+        echo '======================================='
+        echo 'STEP 10 - Pushing Docker image'
+        echo '======================================='
+
+        sh """
+            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+        """
+
+        sh """
+            docker push ${DOCKER_IMAGE}:latest
+        """
+
+        echo 'Docker image pushed successfully!'
+    }
+}
 
         // =============================================
         // STEP 10 - DEPLOY APPLICATION
