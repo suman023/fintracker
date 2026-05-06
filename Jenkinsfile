@@ -1,196 +1,382 @@
 // =====================================================
-//  JENKINSFILE - FinTrackr App
-//  Simple aur Easy version for Beginners
+// Jenkinsfile - FinTrackr DevSecOps Pipeline
+// Production Style + Beginner Friendly
 // =====================================================
 
 pipeline {
 
-    // Kisi bhi Jenkins machine pe chalo
     agent any
 
-    // NodeJS tool use karo
-    // Jenkins mein configure karo:
-    // Manage Jenkins → Tools → NodeJS → Add → Name: NodeJS-18
+    // -------------------------------------------------
+    // TOOLS
+    // -------------------------------------------------
     tools {
-        nodejs 'NodeJS-18'
+        nodejs 'NodeJS-20'
     }
 
-    // Variables jo poori pipeline mein use honge
+    // -------------------------------------------------
+    // ENV VARIABLES
+    // -------------------------------------------------
     environment {
-        APP_NAME     = "fintrackr"
-        DOCKER_IMAGE = "suman023/fintrackr"
-        DOCKER_TAG   = "v${BUILD_NUMBER}"
-        MY_EMAIL     = "sumankumar02304@gmail.com"
+
+        APP_NAME      = "fintrackr"
+
+        DOCKER_IMAGE  = "suman023/fintrackr"
+
+        DOCKER_TAG    = "v${BUILD_NUMBER}"
+
+        MY_EMAIL      = "sumankumar02304@gmail.com"
+
+        SONAR_PROJECT = "suman023_fintracker"
+
+        SONAR_ORG     = "suman023"
     }
 
+    // -------------------------------------------------
+    // OPTIONS
+    // -------------------------------------------------
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    // -------------------------------------------------
+    // STAGES
+    // -------------------------------------------------
     stages {
 
-        // -------------------------------------------
-        // STEP 1: GitHub se code download karo
-        // -------------------------------------------
-        stage('Code Download') {
+        // =============================================
+        // STEP 1 - DOWNLOAD CODE
+        // =============================================
+        stage('Code Checkout') {
+
             steps {
-                echo '>>> Step 1: Code download ho raha hai...'
+
+                echo '======================================='
+                echo 'STEP 1 - Downloading source code'
+                echo '======================================='
+
                 checkout scm
-                echo '>>> Code download ho gaya!'
+
+                echo 'Code checkout successful!'
             }
         }
 
-        // -------------------------------------------
-        // STEP 2: npm install karo
-        // -------------------------------------------
-        stage('Install Packages') {
+        // =============================================
+        // STEP 2 - VERIFY NODE VERSION
+        // =============================================
+        stage('Verify Environment') {
+
             steps {
-                echo '>>> Step 2: npm install chal raha hai...'
-                dir('backend') {
-                    sh 'npm install'
-                }
-                echo '>>> Packages install ho gaye!'
-            }
-        }
 
-        // -------------------------------------------
-        // STEP 3: Tests chalao
-        // -------------------------------------------
-        stage('Run Tests') {
-            steps {
-                echo '>>> Step 3: Tests chal rahe hain...'
-                dir('backend') {
-                    sh 'npm test || true'
-                }
-                echo '>>> Tests khatam!'
-            }
-        }
+                echo '======================================='
+                echo 'STEP 2 - Verifying environment'
+                echo '======================================='
 
-        // -------------------------------------------
-        // STEP 4: SonarCloud - Code Quality Check
-        // -------------------------------------------
-        stage('SonarCloud Scan') {
-    steps {
-        echo '>>> Step 4: SonarCloud scan chal raha hai...'
-
-        withSonarQubeEnv('SonarCloud') {
-
-            sh """
-                npx sonar-scanner \
-                  -Dsonar.projectKey=suman023_fintracker \
-                  -Dsonar.organization=suman023 \
-                  -Dsonar.sources=backend \
-                  -Dsonar.tests=backend \
-                  -Dsonar.test.inclusions=**/*.test.js \
-                  -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/package-lock.json \
-                  -Dsonar.host.url=https://sonarcloud.io
-            """
-        }
-
-        echo '>>> SonarCloud scan ho gaya!'
-    }
-}
-
-        // -------------------------------------------
-        // STEP 5: Docker Image Banao
-        // -------------------------------------------
-        stage('Docker Build') {
-            steps {
-                echo '>>> Step 5: Docker image ban rahi hai...'
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                sh "docker tag  ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
-                echo ">>> Image ban gayi: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-            }
-        }
-
-        // -------------------------------------------
-        // STEP 6: Trivy - Security Check
-        // -------------------------------------------
-         stage('Install Trivy') {
-            steps {
                 sh '''
-                    sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+                    node --version
+                    npm --version
+                '''
+            }
+        }
 
-                    wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+        // =============================================
+        // STEP 3 - INSTALL DEPENDENCIES
+        // =============================================
+        stage('Install Dependencies') {
+
+            steps {
+
+                echo '======================================='
+                echo 'STEP 3 - Installing packages'
+                echo '======================================='
+
+                dir('backend') {
+
+                    sh '''
+                        rm -rf node_modules package-lock.json
+
+                        npm install
+
+                        chmod -R +x node_modules/.bin || true
+                    '''
+                }
+
+                echo 'Dependencies installed!'
+            }
+        }
+
+        // =============================================
+        // STEP 4 - RUN TESTS
+        // =============================================
+        stage('Run Tests') {
+
+            steps {
+
+                echo '======================================='
+                echo 'STEP 4 - Running Jest tests'
+                echo '======================================='
+
+                dir('backend') {
+
+                    sh '''
+                        chmod -R +x node_modules/.bin || true
+
+                        npx jest --coverage --forceExit
+                    '''
+                }
+
+                echo 'Tests completed!'
+            }
+        }
+
+        // =============================================
+        // STEP 5 - SONARCLOUD SCAN
+        // =============================================
+        stage('SonarCloud Scan') {
+
+            steps {
+
+                echo '======================================='
+                echo 'STEP 5 - SonarCloud scan'
+                echo '======================================='
+
+                withSonarQubeEnv('SonarCloud') {
+
+                    sh """
+                        npx sonar-scanner \
+                          -Dsonar.projectKey=${SONAR_PROJECT} \
+                          -Dsonar.organization=${SONAR_ORG} \
+                          -Dsonar.sources=backend \
+                          -Dsonar.tests=backend \
+                          -Dsonar.test.inclusions=**/*.test.js \
+                          -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/package-lock.json \
+                          -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info \
+                          -Dsonar.host.url=https://sonarcloud.io
+                    """
+                }
+
+                echo 'SonarCloud scan completed!'
+            }
+        }
+
+        // =============================================
+        // STEP 6 - BUILD DOCKER IMAGE
+        // =============================================
+        stage('Docker Build') {
+
+            steps {
+
+                echo '======================================='
+                echo 'STEP 6 - Building Docker image'
+                echo '======================================='
+
+                sh """
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                """
+
+                sh """
+                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                """
+
+                echo "Docker image created!"
+            }
+        }
+
+        // =============================================
+        // STEP 7 - INSTALL TRIVY (IF NOT INSTALLED)
+        // =============================================
+        stage('Install Trivy') {
+
+            steps {
+
+                echo '======================================='
+                echo 'STEP 7 - Installing Trivy'
+                echo '======================================='
+
+                sh '''
+
+                    if ! command -v trivy &> /dev/null
+                    then
+
+                        sudo apt-get update
+
+                        sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+
+                        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
                         | gpg --dearmor \
                         | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
 
-                    echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" \
+                        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" \
                         | sudo tee /etc/apt/sources.list.d/trivy.list
 
-                    sudo apt-get update
-                    sudo apt-get install -y trivy
+                        sudo apt-get update
+
+                        sudo apt-get install -y trivy
+
+                    fi
+
                     trivy --version
                 '''
             }
         }
 
+        // =============================================
+        // STEP 8 - TRIVY SECURITY SCAN
+        // =============================================
         stage('Trivy Scan') {
-            steps {
-                sh " trivy image --exit-code 0 --severity HIGH,CRITICAL ${DOCKER_IMAGE}:latest"
-                archiveArtifacts artifacts: 'trivy-result.json', followSymlinks: false
-            }
+
+    steps {
+
+        echo '======================================='
+        echo 'STEP 8 - Security scanning'
+        echo '======================================='
+
+        sh '''
+
+            mkdir -p trivy-reports
+
+            trivy image \
+            --severity HIGH,CRITICAL \
+            --format template \
+            --template "@/usr/local/share/trivy/templates/html.tpl" \
+            -o trivy-reports/trivy-report.html \
+            suman023/fintrackr:latest
+
+        '''
+
+        echo 'Trivy scan completed!'
+    }
+
+    post {
+
+        always {
+
+            archiveArtifacts artifacts: 'trivy-reports/trivy-report.html', fingerprint: true
         }
-        // -------------------------------------------
-        // STEP 7: DockerHub Login + Push
-        // -------------------------------------------
+    }
+}
+        // =============================================
+        // STEP 9 - PUSH TO DOCKERHUB
+        // =============================================
         stage('Docker Push') {
+
             steps {
-                echo '>>> Step 7: DockerHub pe image push ho rahi hai...'
+
+                echo '======================================='
+                echo 'STEP 9 - Pushing image to DockerHub'
+                echo '======================================='
+
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-credentials',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                    sh "docker push ${DOCKER_IMAGE}:latest"
+
+                    sh '''
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    '''
+
+                    sh """
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    """
+
+                    sh """
+                        docker push ${DOCKER_IMAGE}:latest
+                    """
                 }
-                echo '>>> Image push ho gayi!'
+
+                echo 'Docker image pushed successfully!'
             }
         }
 
-        // -------------------------------------------
-        // STEP 8: App Deploy karo
-        // -------------------------------------------
-        stage('Deploy') {
+        // =============================================
+        // STEP 10 - DEPLOY APPLICATION
+        // =============================================
+        stage('Deploy Application') {
+
             steps {
-                echo '>>> Step 8: App deploy ho rahi hai...'
+
+                echo '======================================='
+                echo 'STEP 10 - Deploying application'
+                echo '======================================='
+
                 sh '''
+
                     docker compose down || true
+
                     docker compose up -d --build
-                    sleep 10
+
+                    sleep 15
+
                     docker compose ps
                 '''
-                echo '>>> App live hai: http://localhost:3000'
+
+                echo 'Application deployed!'
             }
         }
+    }
 
-    } // stages end
-
-    // Pipeline ke baad kya karo
+    // -------------------------------------------------
+    // POST ACTIONS
+    // -------------------------------------------------
     post {
 
         success {
-            echo '🎉 BUILD SUCCESSFUL! App chal rahi hai!'
+
+            echo '======================================='
+            echo 'BUILD SUCCESSFUL!'
+            echo '======================================='
+
             emailext(
-                subject: "✅ FinTrackr Build #${BUILD_NUMBER} - SUCCESS",
-                body: "Build pass ho gaya!\n\nApp: http://localhost:3000\nBuild: ${BUILD_URL}",
+                subject: "SUCCESS - FinTrackr Build #${BUILD_NUMBER}",
+                body: """
+                    Build Successful!
+
+                    Job Name: ${JOB_NAME}
+
+                    Build Number: ${BUILD_NUMBER}
+
+                    Build URL:
+                    ${BUILD_URL}
+
+                    Application deployed successfully.
+                """,
                 to: "${MY_EMAIL}"
             )
         }
 
         failure {
-            echo '❌ BUILD FAILED! Error dekho upar.'
+
+            echo '======================================='
+            echo 'BUILD FAILED!'
+            echo '======================================='
+
             emailext(
-                subject: "❌ FinTrackr Build #${BUILD_NUMBER} - FAILED",
-                body: "Build fail ho gaya!\n\nError dekho: ${BUILD_URL}console",
+                subject: "FAILED - FinTrackr Build #${BUILD_NUMBER}",
+                body: """
+                    Build Failed!
+
+                    Job Name: ${JOB_NAME}
+
+                    Build Number: ${BUILD_NUMBER}
+
+                    Check logs:
+                    ${BUILD_URL}console
+                """,
                 to: "${MY_EMAIL}"
             )
         }
 
         always {
-            echo '🧹 Cleanup...'
+
+            echo '======================================='
+            echo 'Cleaning workspace'
+            echo '======================================='
+
             sh 'docker logout || true'
+
             cleanWs()
         }
-
-    } // post end
-
-} // pipeline end
+    }
+}
