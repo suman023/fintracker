@@ -13,7 +13,7 @@ pipeline {
 
         APP_NAME      = "fintrackr"
 
-        DOCKER_IMAGE  = "suman023/fintrackr"
+        DOCKER_IMAGE = "suman2304/fintracker"
 
         DOCKER_TAG    = "v${BUILD_NUMBER}"
 
