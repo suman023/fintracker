@@ -13,14 +13,14 @@ services:
   # ── SERVICE 1: FinTrackr App ───────────────────────
   app:
 
-    # Dockerfile se image banao
+    # Dockerfile To image 
     build: .
 
-    # Container ka naam
+    # Container name
     container_name: fintrackr_app
 
-    # Port: tumhara PC:container
-    # Browser mein http://localhost:3000 kholo
+    # Port: 
+    # Browser: http://localhost:3000 
     ports:
       - "3000:3000"
 
@@ -30,10 +30,10 @@ services:
       - PORT=3000
       - FRONTEND_PATH=/app/frontend
 
-    # Crash hone par restart karo
+    # Crash on restart 
     restart: unless-stopped
 
-    # Redis pehle start ho
+    # Redis depends
     depends_on:
       - redis
 
@@ -41,24 +41,24 @@ services:
   # ── SERVICE 2: Redis ───────────────────────────────
   redis:
 
-    # Ready-made Redis image use karo
+    # Ready-made Redis image 
     image: redis:7-alpine
 
-    # Container ka naam
+    # Container name
     container_name: fintrackr_redis
 
     # Redis port
     ports:
       - "6379:6379"
 
-    # Data persist karo
+    # Data persist
     volumes:
       - redis_data:/data
 
     restart: unless-stopped
 
 
-# Data store karne ki jagah
+# Data store 
 volumes:
   redis_data:
 
