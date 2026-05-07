@@ -1,187 +1,112 @@
-# 💸 Expensio — Full Stack Expense Tracker
+# FinTrackr — Expense Tracker App
 
-> **CV Project** | Full-Stack Web App with Complete DevOps CI/CD Pipeline
-
-[![Node.js](https://img.shields.io/badge/Node.js-18-green)](https://nodejs.org)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://docker.com)
-[![Jenkins](https://img.shields.io/badge/CI/CD-Jenkins-red)](https://jenkins.io)
-[![SonarQube](https://img.shields.io/badge/Code_Quality-SonarQube-orange)](https://sonarqube.org)
-[![Trivy](https://img.shields.io/badge/Security-Trivy-purple)](https://trivy.dev)
+A full-stack expense tracking web app with a complete DevSecOps CI/CD pipeline.
 
 ---
 
-## 🎯 Project Overview
+## What This Project Does
 
-Expensio is a full-stack expense tracking web application with a complete DevOps CI/CD pipeline. Built as a portfolio project to demonstrate DevOps skills including containerization, automated testing, code quality analysis, security scanning, and continuous deployment.
+- Track your income and expenses
+- View spending by category with charts
+- Light and Dark mode support
+- Fully automated build and deploy pipeline
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | HTML5, CSS3, Vanilla JavaScript |
-| Backend | Node.js, Express.js |
-| Database | Redis (Cache) |
-| Reverse Proxy | Nginx |
-| Containerization | Docker, Docker Compose |
+| Part | Technology |
+|------|-----------|
+| Frontend | HTML, CSS, JavaScript |
+| Backend | Node.js, Express |
+| Database | Redis |
+| Server | Nginx |
+| Container | Docker, Docker Compose |
 | CI/CD | Jenkins |
-| Code Quality | SonarQube |
+| Code Quality | SonarCloud |
 | Security Scan | Trivy |
 | Registry | Docker Hub |
-| Notifications | Email (SMTP) |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-expensio/
+fintrackr/
 ├── frontend/
-│   └── index.html              # Single page expense tracker app
+│   └── index.html
 ├── backend/
-│   ├── server.js               # Express REST API
-│   ├── server.test.js          # Jest unit tests
+│   ├── server.js
+│   ├── server.test.js
 │   └── package.json
 ├── nginx/
-│   └── nginx.conf              # Reverse proxy configuration
-├── Dockerfile                  # Multi-stage Docker build
-├── docker-compose.yml          # Multi-container orchestration
-├── Jenkinsfile                 # 10-stage CI/CD pipeline
-├── sonar-project.properties    # SonarQube configuration
-├── .env.example                # Environment variables template
-└── README.md
+│   └── nginx.conf
+├── Dockerfile
+├── docker-compose.yml
+├── Jenkinsfile
+└── sonar-project.properties
 ```
 
 ---
 
-## 🔄 CI/CD Pipeline (Jenkins — 10 Stages)
+## Jenkins Pipeline — 11 Stages
 
 ```
-Push to GitHub
-      │
-      ▼
-┌─────────────────┐
-│ 1. Git Clone    │  → Checkout source code
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 2. npm Install  │  → Install dependencies
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 3. Run Tests    │  → Jest unit tests + coverage report
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 4. SonarQube    │  → Code quality + bug detection
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 5. Quality Gate │  → Fail if code quality is below threshold
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 6. Docker Build │  → Build production Docker image
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 7. Trivy Scan   │  → Scan image for CVE vulnerabilities
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 8. Docker Login │  → Authenticate with Docker Hub
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 9. Docker Push  │  → Push image to Docker Hub registry
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ 10. Deploy      │  → docker compose up (live deployment)
-└────────┬────────┘
-         │
-         ▼
-   📧 Email Alert (Success/Failure)
+Stage 1  →  Code Download      (git clone)
+Stage 2  →  Verify NodeJS      (node -v)
+Stage 3  →  Install Packages   (npm install)
+Stage 4  →  Run Tests          (jest)
+Stage 5  →  SonarCloud Scan    (code quality)
+Stage 6  →  Docker Build       (create image)
+Stage 7  →  Verify Trivy       (trivy version)
+Stage 8  →  Trivy Scan         (security check)
+Stage 9  →  Docker Login       (dockerhub)
+Stage 10 →  Docker Push        (upload image)
+Stage 11 →  Deploy             (docker compose up)
 ```
 
 ---
 
-## 🚀 Quick Start
+## How to Run Locally
 
-### 1. Clone the repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/expensio.git
-cd expensio
-```
+# Clone the repo
+git clone https://github.com/suman023/fintracker.git
+cd fintracker
 
-### 2. Run locally (without Docker)
-```bash
-cd backend
-npm install
-npm start
-# Open: http://localhost:3000
-```
-
-### 3. Run with Docker
-```bash
-docker build -t expensio .
-docker run -p 3000:3000 expensio
-```
-
-### 4. Run full stack (Docker Compose)
-```bash
-cp .env.example .env
+# Start with Docker
 docker compose up -d
-# Open: http://localhost
+
+# Open in browser
+http://localhost:3000
 ```
 
 ---
 
-## 🌐 API Endpoints
+## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| GET | `/api/transactions` | Get all transactions |
-| POST | `/api/transactions` | Add new transaction |
-| DELETE | `/api/transactions/:id` | Delete transaction |
-| GET | `/api/stats` | Summary statistics |
-
----
-
-## 🔒 DevOps & Security Features
-
-- **Multi-stage Docker build** — small, secure production image
-- **Non-root container user** — runs as `appuser` for security
-- **Trivy vulnerability scanning** — CVE detection on every build
-- **SonarQube analysis** — code quality gates before deployment
-- **Nginx rate limiting** — 30 requests/min per IP
-- **Security headers** — Helmet.js HTTP security headers
-- **Health checks** — Docker and Jenkins verify app liveness
+| Method | URL | What it does |
+|--------|-----|-------------|
+| GET | /api/health | Check if app is running |
+| GET | /api/transactions | Get all transactions |
+| POST | /api/transactions | Add new transaction |
+| DELETE | /api/transactions/:id | Delete a transaction |
+| GET | /api/stats | Get summary stats |
 
 ---
 
-## 📊 Jenkins Prerequisites
+## Jenkins Setup
 
-Install these plugins in Jenkins:
-- Docker Pipeline
-- SonarQube Scanner
-- Email Extension (emailext)
-- HTML Publisher
-- AnsiColor
+1. Add credentials in Jenkins:
+   - `dockerhub-credentials` — Docker Hub username and password
+   - `sonar-token` — SonarCloud token
 
-Add these credentials in Jenkins (Manage Jenkins → Credentials):
-- `dockerhub-credentials` — Docker Hub username + password
-- `sonar-token` — SonarQube authentication token
+2. Configure SonarCloud:
+   - Manage Jenkins → Configure System → SonarQube Servers
+   - Name: `SonarCloud`
+   - URL: `https://sonarcloud.io`
 
----
-
-## 👨‍💻 Author
-
-Built as a DevOps portfolio project demonstrating:
-- Full-stack development (Frontend + Backend)
-- Docker containerization
-- CI/CD pipeline automation
-- Code quality and security scanning
-- Infrastructure as Code
+3. Configure Email:
+   - SMTP: `smtp.gmail.com`
+   - Port: `465`
+   - Use SSL: Yes
