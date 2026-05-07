@@ -1,40 +1,38 @@
 // ╔═══════════════════════════════════════════════════════╗
-// ║         JENKINSFILE - FinTrackr App                  ║
-// ║         Beginner Friendly Version                    ║
+// ║         JENKINSFILE - FinTrackr App                   ║
 // ║                                                       ║
-// ║  Yeh pipeline automatically yeh kaam karta hai:      ║
-// ║  1.  Code download  (GitHub se)                      ║
-// ║  2.  Node check     (node/npm version)               ║
-// ║  3.  npm install    (packages)                       ║
-// ║  4.  Tests          (code sahi hai?)                 ║
-// ║  5.  SonarCloud     (code quality)                   ║
-// ║  6.  Docker build   (image banao)                    ║
-// ║  7.  Trivy check    (trivy version)                  ║
-// ║  8.  Trivy scan     (security check)                 ║
-// ║  9.  Docker login   (dockerhub)                      ║
-// ║  10. Docker push    (image upload)                   ║
-// ║  11. Deploy         (app live karo)                  ║
-// ║  12. Email          (success/fail batao)             ║
+// ║  1.  Code download  (GitHub)                          ║
+// ║  2.  Node check     (node/npm version)                ║
+// ║  3.  npm install    (packages)                        ║
+// ║  4.  Tests          (code checking?)                  ║
+// ║  5.  SonarCloud     (code quality)                    ║
+// ║  6.  Docker build   (image)                           ║
+// ║  7.  Trivy check    (trivy version)                   ║
+// ║  8.  Trivy scan     (security check)                  ║
+// ║  9.  Docker login   (dockerhub)                       ║
+// ║  10. Docker push    (image upload)                    ║
+// ║  11. Deploy         (app live)                        ║
+// ║  12. Email          (success/fail)                    ║
 // ╚═══════════════════════════════════════════════════════╝
 
 pipeline {
 
-    // Kisi bhi Jenkins machine pe chalo
+   
     agent any
 
     // ═══════════════════════════════════════════════════
-    // VARIABLES - poori pipeline mein use honge
+    // VARIABLES 
     // ═══════════════════════════════════════════════════
     environment {
 
-        // App ka naam
+        // App name
         APP_NAME = "fintrackr"
 
-        // DockerHub pe image ka naam
+        // DockerHub image name
         // Format: "dockerhub_username/app_naam"
         DOCKER_IMAGE = "suman2304/fintrackr"
 
-        // Image ka version - BUILD_NUMBER Jenkins deta hai (1,2,3...)
+        // Image version - BUILD_NUMBER  (1,2,3...)
         DOCKER_TAG = "v${BUILD_NUMBER}"
 
         // SonarCloud project details
@@ -44,38 +42,37 @@ pipeline {
         // Notification email
         EMAIL_TO = "sumanshit023@gmail.com"
 
-        // System path - node/npm dhundhne ke liye
+        // System path - node/npm 
         PATH = "/usr/bin:/usr/local/bin:${env.PATH}"
     }
 
     // ═══════════════════════════════════════════════════
-    // OPTIONS - pipeline ki settings
+    // OPTIONS - pipeline settings
     // ═══════════════════════════════════════════════════
     options {
-        // Logs mein time dikhao
+        // Logs time 
         timestamps()
 
-        // Ek saath 2 builds mat chalao
+
         disableConcurrentBuilds()
 
-        // Sirf last 10 builds rakho (disk bachao)
+       
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     // ═══════════════════════════════════════════════════
-    // STAGES - pipeline ke steps
+    // STAGES - pipeline steps
     // ═══════════════════════════════════════════════════
     stages {
 
         // ─────────────────────────────────────────────
-        // STEP 1 - GitHub se code download karo
+        // STEP 1 - GitHub code download 
         // ─────────────────────────────────────────────
         stage('1 - Code Download') {
             steps {
-                echo '>>> STEP 1: Code download ho raha hai...'
+                echo '>>> STEP 1: Code download ...'
 
-                // Jenkins job mein configure ki hui
-                // GitHub repo se code clone karo
+                
                 checkout scm
 
                 echo '>>> STEP 1: Done!'
@@ -83,11 +80,11 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────
-        // STEP 2 - Check karo node aur npm hai ya nahi
+        // STEP 2 - Check node and npm 
         // ─────────────────────────────────────────────
         stage('2 - Verify NodeJS') {
             steps {
-                echo '>>> STEP 2: NodeJS check ho raha hai...'
+                echo '>>> STEP 2: NodeJS check ...'
 
                 sh '''
                     which node
@@ -100,11 +97,11 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────
-        // STEP 3 - npm install karo
+        // STEP 3 - npm install 
         // ─────────────────────────────────────────────
         stage('3 - Install Packages') {
             steps {
-                echo '>>> STEP 3: npm install chal raha hai...'
+                echo '>>> STEP 3: npm installing ...'
 
                 dir('backend') {
                     sh '''
@@ -120,12 +117,11 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────
-        // STEP 4 - Tests chalao
-        // Code sahi kaam kar raha hai? Check karo
+        // STEP 4 - Tests 
         // ─────────────────────────────────────────────
         stage('4 - Run Tests') {
             steps {
-                echo '>>> STEP 4: Tests chal rahe hain...'
+                echo '>>> STEP 4: Tests code...'
 
                 dir('backend') {
                     sh '''
@@ -141,15 +137,13 @@ pipeline {
 
         // ─────────────────────────────────────────────
         // STEP 5 - SonarCloud Scan
-        // Code mein bugs/problems dhundho
         // Results: https://sonarcloud.io/organizations/suman023
         // ─────────────────────────────────────────────
         stage('5 - SonarCloud Scan') {
             steps {
-                echo '>>> STEP 5: SonarCloud scan chal raha hai...'
+                echo '>>> STEP 5: SonarCloud scanning ...'
 
-                // 'SonarCloud' = Jenkins mein configure kiya hua naam
-                // Manage Jenkins → Configure System → SonarQube Servers
+                
                 withSonarQubeEnv('SonarCloud') {
                     sh """
                         npx sonar-scanner \
@@ -169,17 +163,16 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────
-        // STEP 6 - Docker Image Banao
-        // App ko Docker container mein pack karo
+        // STEP 6 - Docker Image 
         // ─────────────────────────────────────────────
         stage('6 - Docker Build') {
             steps {
-                echo '>>> STEP 6: Docker image ban rahi hai...'
+                echo '>>> STEP 6: Docker image...'
 
-                // Dockerfile se image banao
+                // Dockerfile To image
                 sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
 
-                // Same image ko latest bhi tag karo
+                // tagging
                 sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
 
                 echo ">>> STEP 6: Done! Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
@@ -188,7 +181,7 @@ pipeline {
 
         // ─────────────────────────────────────────────
         // STEP 7 - Trivy Version Check
-        // Verify karo Trivy install hai
+        // 
         // ─────────────────────────────────────────────
         stage('7 - Verify Trivy') {
             steps {
@@ -202,13 +195,11 @@ pipeline {
 
         // ─────────────────────────────────────────────
         // STEP 8 - Trivy Security Scan
-        // Docker image mein koi vulnerability toh nahi?
-        // Jaise antivirus scan karta hai waise
-        // Report trivy-reports/trivy-report.html mein
+        // Report trivy-reports/trivy-report.html
         // ─────────────────────────────────────────────
         stage('8 - Trivy Security Scan') {
             steps {
-                echo '>>> STEP 8: Security scan ho raha hai...'
+                echo '>>> STEP 8: Security scanning...'
 
                 sh '''
                     mkdir -p trivy-reports
@@ -233,8 +224,8 @@ pipeline {
 
             post {
                 always {
-                    // HTML report Jenkins mein save karo
-                    // Jenkins job → Artifacts mein dikhega
+                    // HTML report Jenkins save
+                    // Jenkins job → Artifacts 
                     archiveArtifacts artifacts: 'trivy-reports/trivy-report.html',
                                      fingerprint: true
                 }
@@ -243,21 +234,19 @@ pipeline {
 
         // ─────────────────────────────────────────────
         // STEP 9 - DockerHub Login
-        // Image push karne se pehle login karo
         // Credentials: Manage Jenkins → Credentials
         //   ID: dockerhub-credentials
         // ─────────────────────────────────────────────
         stage('9 - Docker Login') {
             steps {
-                echo '>>> STEP 9: DockerHub login ho raha hai...'
+                echo '>>> STEP 9: DockerHub login...'
 
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-credentials',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    // Securely login karo
-                    // Password kabhi logs mein nahi dikhega
+                    
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
 
@@ -267,17 +256,15 @@ pipeline {
 
         // ─────────────────────────────────────────────
         // STEP 10 - Docker Push
-        // Image DockerHub pe upload karo
-        // Link: https://hub.docker.com/r/suman2304/fintrackr
         // ─────────────────────────────────────────────
         stage('10 - Docker Push') {
             steps {
-                echo '>>> STEP 10: Image DockerHub pe push ho rahi hai...'
+                echo '>>> STEP 10: Image DockerHub Push...'
 
-                // Version tag wali image push karo
+                // Version tag 
                 sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
 
-                // Latest tag bhi push karo
+                // Latest tag 
                 sh "docker push ${DOCKER_IMAGE}:latest"
 
                 echo '>>> STEP 10: Done!'
@@ -286,23 +273,23 @@ pipeline {
 
         // ─────────────────────────────────────────────
         // STEP 11 - Deploy
-        // Docker Compose se app live karo
+        // Docker Compose 
         // ─────────────────────────────────────────────
         stage('11 - Deploy') {
             steps {
-                echo '>>> STEP 11: App deploy ho rahi hai...'
+                echo '>>> STEP 11: App deploy ...'
 
                 sh '''
-                    # Purane containers band karo
+                    
                     docker compose down || true
 
-                    # Nayi image se start karo
+                    
                     docker compose up -d --build
 
-                    # 15 second wait karo start hone ke liye
+                    
                     sleep 15
 
-                    # Status dekho
+                    
                     docker compose ps
                 '''
 
@@ -310,29 +297,25 @@ pipeline {
             }
         }
 
-    } // stages end
+    } 
 
     // ═══════════════════════════════════════════════════
     // POST ACTIONS
-    // Pipeline khatam hone ke baad chalega
     // ═══════════════════════════════════════════════════
     post {
 
-        // Hamesha chalega - success ho ya fail
+        
         always {
-            echo '>>> Cleanup ho raha hai...'
+            echo '>>> Cleanup...'
             sh 'docker logout || true'
             cleanWs()
         }
 
-        // Sirf success hone par
+        
         success {
             echo '🎉 BUILD SUCCESSFUL!'
 
-            // Email bhejo - success
-            // SMTP configure karo:
-            // Manage Jenkins → Configure System → Extended Email
-            // SMTP: smtp.gmail.com, Port: 465, SSL: on
+            
             mail(
                 to: "${EMAIL_TO}",
                 subject: "✅ SUCCESS: FinTrackr Build #${env.BUILD_NUMBER}",
@@ -351,11 +334,11 @@ DockerHub  : https://hub.docker.com/r/suman2304/fintrackr
             )
         }
 
-        // Sirf fail hone par
+      
         failure {
             echo '❌ BUILD FAILED!'
 
-            // Email bhejo - failure
+           
             mail(
                 to: "${EMAIL_TO}",
                 subject: "❌ FAILED: FinTrackr Build #${env.BUILD_NUMBER}",
@@ -366,11 +349,10 @@ Project   : ${env.JOB_NAME}
 Build No  : #${env.BUILD_NUMBER}
 Error Log : ${env.BUILD_URL}console
 
-Jaldi check karo!
+Please check!
                 """
             )
         }
 
-    } // post end
-
-} // pipeline end
+    } 
+} 
